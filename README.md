@@ -1,1 +1,1 @@
-# bohr-atom-research-simulator
+# Bohr model atom simulator with a twist (literally)
