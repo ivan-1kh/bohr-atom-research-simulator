@@ -5,7 +5,7 @@ import {
   Scene,
   ArcRotateCamera,
   Vector3,
-  HemisphericLight,
+  /*HemisphericLight,*/
   MeshBuilder,
   StandardMaterial,
   Color3,

@@ -1,6 +1,6 @@
 // src/BabylonScene.js
 import React, { useEffect, useRef } from 'react';
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, MeshBuilder, StandardMaterial, Texture, Color3 } from '@babylonjs/core';
+import { Engine, Scene, ArcRotateCamera, Vector3, /*HemisphericLight,*/ MeshBuilder, StandardMaterial, Texture, Color3 } from '@babylonjs/core';
 import "@babylonjs/loaders/glTF"; // Import glTF loader
 
 const BabylonScene = () => {
