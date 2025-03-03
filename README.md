@@ -1,6 +1,7 @@
 # Bohr model atom simulator with a twist (literally)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Try the demo: https://bohr-sim.netlify.app/
+
 
 ## Available Scripts
 
