@@ -1,5 +1,5 @@
 import React from 'react';
-import BabylonScene from './BabylonScene';
+// import BabylonScene from './BabylonScene';
 import './App.css';
 import AtomSimulation from './AtomSimulation';
 

@@ -31,7 +31,7 @@ const AtomSimulation = () => {
       camera.lowerRadiusLimit = 5;  // Prevent zooming too close
       camera.upperRadiusLimit = 50; // Prevent zooming too far
 
-      const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
+      // const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
 
       // --- Atom Creation ---
 

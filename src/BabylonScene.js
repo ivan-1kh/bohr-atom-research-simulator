@@ -23,7 +23,7 @@ const BabylonScene = () => {
         camera.attachControl(canvasRef.current, true); // Attach the camera to the canvas
 
         // Create a light.
-        const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
+        // const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
 
         // Create a simple box (you can replace this with a loaded model).
         const box = MeshBuilder.CreateBox("box", { size: 2 }, scene);
