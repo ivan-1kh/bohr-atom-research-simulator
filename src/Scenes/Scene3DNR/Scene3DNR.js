@@ -14,7 +14,7 @@ import {
   EasingFunction
 } from '@babylonjs/core';
 
-const AtomSimulation = () => {
+const Scene3DNR = () => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
 
@@ -137,4 +137,4 @@ const AtomSimulation = () => {
   );
 };
 
-export default AtomSimulation;
+export default Scene3DNR;
