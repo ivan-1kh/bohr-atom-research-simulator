@@ -1,138 +1,196 @@
-// src/AtomSimulation.js
+
 import React, { useEffect, useRef } from 'react';
-import {
-  Engine,
-  Scene,
-  ArcRotateCamera,
-  Vector3,
-  /*HemisphericLight,*/
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  Animation,
-  SineEase,
-  EasingFunction
-} from '@babylonjs/core';
+import * as BABYLON from '@babylonjs/core';
+import { TrailMesh } from '@babylonjs/core/Meshes/trailMesh'; // Import TrailMesh
+
+// --- Data Parsing ---
+// (Normally, you'd fetch this from a file, but for this example, we'll parse the string)
+const csvData = `
+t,r,r_dot,r_dot_dot,phi,phi_dot,phi_dot_dot,theta,theta_dot,theta_dot_dot,gamma,delta_phi
+1.50009999999961113034E-04,2.29179607388591666250E+00,4.25699983658073076833E-05,1.41899993408401009498E-01,2.28473045050736232528E-04,7.61551409083566888114E-01,0.00000000000000000000E+00,5.23598786899539425654E-01,7.53416010953532566631E-05,2.51130284653295510200E-01,1.00002027702842455348E+00,0.00000000000000000000E+00
+3.00009999999883471018E-04,2.29179609304220432975E+00,8.51399957017709110201E-05,1.41899988259009096625E-01,4.56938454153970989580E-04,7.61551306915812520337E-01,0.00000000000000000000E+00,5.23598820802505082739E-01,1.50680677698936343976E-04,2.51130218707468100270E-01,1.00002027702823048649E+00,0.00000000000000000000E+00
+4.50009999999805801896E-04,2.29179612496948914568E+00,1.27709990977978109748E-04,1.41899979676576248888E-01,6.85403822390305496499E-04,7.61551136635342351688E-01,0.00000000000000000000E+00,5.23598877307190013752E-01,2.26019727924170883400E-04,2.51130108796196960252E-01,1.00002027702790674546E+00,0.00000000000000000000E+00
+6.00010000000333822319E-04,2.29179616966777288667E+00,1.70279983164515769925E-04,1.41899967661102466288E-01,9.13869129325952820816E-04,7.61550898242250307035E-01,0.00000000000000000000E+00,5.23598956413584559755E-01,3.01358738581436566995E-04,2.51129954919554643222E-01,1.00002027702745355242E+00,0.00000000000000000000E+00
+7.50010000001069304827E-04,2.29179622713705377635E+00,2.12849971231471990886E-04,1.41899952212589358647E-01,1.14233435452714728042E-03,7.61550591736671944609E-01,0.00000000000000000000E+00,5.23599058121674731936E-01,3.76697696481134757310E-04,2.51129757077647453034E-01,1.00002027702687068533E+00,0.00000000000000000000E+00
+9.00010000001804787335E-04,2.29179629737732826200E+00,2.55419954148937650238E-04,1.41899933331039007633E-01,1.37079947756013728784E-03,7.61550217118781458403E-01,0.00000000000000000000E+00,5.23599182431442544683E-01,4.52036588433710727081E-04,2.51129515270612002631E-01,1.00002027702615858828E+00,0.00000000000000000000E+00
+1.05001000000174392335E-03,2.29179638038859945226E+00,2.97989930886999668247E-04,1.41899911016451635293E-01,1.59926447799128932520E-03,7.61549774388786238077E-01,0.00000000000000000000E+00,5.23599329342866459669E-01,5.27375401249642952739E-04,2.51129229498611328264E-01,1.00002027702531703923E+00,0.00000000000000000000E+00
+1.20001000000085310260E-03,2.29179647617086112987E+00,3.40559900415748190682E-04,1.41899885268831349450E-01,1.82772933538700153334E-03,7.61549263546938859371E-01,0.00000000000000000000E+00,5.23599498855920719720E-01,6.02714121739455392993E-04,2.51128899761842216964E-01,1.00002027702434603817E+00,0.00000000000000000000E+00
+1.35000999999996228185E-03,2.29179658472411285075E+00,3.83129861705270571490E-04,1.41899856088179759928E-01,2.05619402931375054935E-03,7.61548684593526536979E-01,0.00000000000000000000E+00,5.23599690970575570859E-01,6.78052736713790618270E-04,2.51128526060530266051E-01,1.00002027702324536307E+00,0.00000000000000000000E+00
+1.50000999999907146110E-03,2.29179670604835195036E+00,4.25699813725661699824E-04,1.41899823474499919840E-01,2.28465853933815027030E-03,7.61548037528874899316E-01,0.00000000000000000000E+00,5.23599905686797484350E-01,7.53391232983299709985E-04,2.51128108394930660285E-01,1.00002027702201523596E+00,0.00000000000000000000E+00
+1.65000999999818064035E-03,2.29179684014357309962E+00,4.68269755447011369089E-04,1.41899787427795853745E-01,2.51312284502682283319E-03,7.61547322353351097135E-01,0.00000000000000000000E+00,5.23600143004548823633E-01,8.28729597358741844511E-04,2.51127646765329892720E-01,1.00002027702065587889E+00,0.00000000000000000000E+00
+1.80000999999728981960E-03,2.29179698700977807491E+00,5.10839685839414143174E-04,1.41899747948069754333E-01,2.74158692594661350384E-03,7.61546539067355587882E-01,0.00000000000000000000E+00,5.23600402923787622278E-01,9.04067816650967488040E-04,2.51127141172042989137E-01,1.00002027701916684777E+00,0.00000000000000000000E+00
+1.95000999999639899884E-03,2.29179714664695843851E+00,5.53409603872964043873E-04,1.41899705035327339253E-01,2.97005076166442956442E-03,7.61545687671330462365E-01,0.00000000000000000000E+00,5.23600685444469471364E-01,9.79405877670911240856E-04,2.51126591615415784009E-01,1.00002027701754836464E+00,0.00000000000000000000E+00
+2.10000999999550817809E-03,2.29179731905511330226E+00,5.95979508517750105646E-04,1.41899658689571495085E-01,3.19851433174733095280E-03,7.61544768165756003064E-01,0.00000000000000000000E+00,5.23600990566543966764E-01,1.05474376722963824118E-03,2.51125998095823255163E-01,1.00002027701580042951E+00,0.00000000000000000000E+00
+2.25000999999461735734E-03,2.29179750423423733707E+00,6.38549398743882071217E-04,1.41899608910807772943E-01,3.42697761576252766039E-03,7.61543780551151461289E-01,0.00000000000000000000E+00,5.23601318289957595731E-01,1.13008147213831998748E-03,2.51125360613674131205E-01,1.00002027701392304238E+00,0.00000000000000000000E+00
+2.40000999999372653659E-03,2.29179770218432476980E+00,6.81119273521453095013E-04,1.41899555699041307610E-01,3.65544059327739751311E-03,7.61542724828072614685E-01,0.00000000000000000000E+00,5.23601668614653958933E-01,1.20541897920823856682E-03,2.51124679169402176271E-01,1.00002027701191598119E+00,0.00000000000000000000E+00
+2.55000999999283571584E-03,2.29179791290537382409E+00,7.23689131820557957769E-04,1.41899499054276817533E-01,3.88390324385948964084E-03,7.61541600997113321547E-01,0.00000000000000000000E+00,5.23602041540571327971E-01,1.28075627525083262509E-03,2.51123953763473517498E-01,1.00002027700977946800E+00,0.00000000000000000000E+00
+2.70000999999194489509E-03,2.29179813639737561815E+00,7.66258972611301631718E-04,1.41899438976521019562E-01,4.11236554707651493640E-03,7.61540409058910294782E-01,0.00000000000000000000E+00,5.23602437067643977642E-01,1.35609334707768153759E-03,2.51123184396386145423E-01,1.00002027700751372485E+00,0.00000000000000000000E+00
+2.85000999999105407434E-03,2.29179837266032881971E+00,8.08828794863791799598E-04,1.41899375465778743166E-01,4.34082748249641457716E-03,7.61539149014131777626E-01,0.00000000000000000000E+00,5.23602855195803185140E-01,1.43143018150050584276E-03,2.51122371068663363669E-01,1.00002027700511830766E+00,0.00000000000000000000E+00
+3.00000999999016325359E-03,2.29179862169422543516E+00,8.51398597548126603168E-04,1.41899308522057204796E-01,4.56928902968738517854E-03,7.61537820863523950976E-01,0.00000000000000000000E+00,5.23603295924962686136E-01,1.50676676533122817433E-03,2.51121513780882710254E-01,1.00002027700259343845E+00,0.00000000000000000000E+00
+3.15000999998927243284E-03,2.29179888349905924727E+00,8.93968379634414484110E-04,1.41899238145363287833E-01,4.79775016821767062714E-03,7.61536424607768047679E-01,0.00000000000000000000E+00,5.23603759255070966283E-01,1.58210308538188760934E-03,2.51120612533592302285E-01,1.00002027699993911725E+00,0.00000000000000000000E+00
+3.30000999998838161209E-03,2.29179915807482581513E+00,9.36538140092768329331E-04,1.41899164335703487083E-01,5.02621087765592593904E-03,7.61534960247685854817E-01,0.00000000000000000000E+00,5.23604245186033434578E-01,1.65743912846472358537E-03,2.51119667327428019998E-01,1.00002027699715534403E+00,0.00000000000000000000E+00
+3.45000999998749079134E-03,2.29179944542151492470E+00,9.79107877893296797353E-04,1.41899087093086601064E-01,5.25467113757093883669E-03,7.61533427784104266500E-01,0.00000000000000000000E+00,5.23604753717765158960E-01,1.73277488139217199746E-03,2.51118678163037511997E-01,1.00002027699424189677E+00,0.00000000000000000000E+00
+3.60000999998659997059E-03,2.29179974553912479962E+00,1.02167759200611852136E-03,1.41899006417518430689E-01,5.48313092753180929273E-03,7.61531827217881374104E-01,0.00000000000000000000E+00,5.23605284850177987721E-01,1.80811033097688688212E-03,2.51117645041094073033E-01,1.00002027699119944160E+00,0.00000000000000000000E+00
+3.75000999998570914984E-03,2.29180005842764344948E+00,1.06424728140133901567E-03,1.41898922309009023479E-01,5.71159022710784978344E-03,7.61530158549923674727E-01,0.00000000000000000000E+00,5.23605838583178773149E-01,1.88344546403168859247E-03,2.51116567962306302952E-01,1.00002027698802709033E+00,0.00000000000000000000E+00
+3.90000999998481832909E-03,2.29180038408706510111E+00,1.10681694504908417764E-03,1.41898834767565901194E-01,5.94004901586871539299E-03,7.61528421781170195004E-01,0.00000000000000000000E+00,5.23606414916670370729E-01,1.95878026736964272816E-03,2.51115446927410446154E-01,1.00002027698472528705E+00,0.00000000000000000000E+00
+4.05000999998392750834E-03,2.29180072251738264910E+00,1.14938658191947708567E-03,1.41898743793198306440E-01,6.16850727338426243346E-03,7.61526616912601039822E-01,0.00000000000000000000E+00,5.23607013850551639145E-01,2.03411472780402544092E-03,2.51114281937173888792E-01,1.00002027698129403177E+00,0.00000000000000000000E+00
+4.20000999998303668759E-03,2.29180107371858543530E+00,1.19195619098264103501E-03,1.41898649385915648358E-01,6.39696497922477048947E-03,7.61524743945234505738E-01,0.00000000000000000000E+00,5.23607635384717884364E-01,2.10944883214834923851E-03,2.51113072992393215888E-01,1.00002027697773332449E+00,0.00000000000000000000E+00
+4.35000999998214586684E-03,2.29180143769066813064E+00,1.23452577120870105563E-03,1.41898551545726864243E-01,6.62542211296072644511E-03,7.61522802880123750313E-01,0.00000000000000000000E+00,5.23608279519060415552E-01,2.18478256721639074039E-03,2.51111820093894821948E-01,1.00002027697404338724E+00,0.00000000000000000000E+00
+4.50009999998125504609E-03,2.29180181443361830063E+00,1.27709532156778846589E-03,1.41898450272642917547E-01,6.85387865416296499649E-03,7.61520793718364563674E-01,0.00000000000000000000E+00,5.23608946253466767118E-01,2.26011591982214123803E-03,2.51110523242536742838E-01,1.00002027697022377595E+00,0.00000000000000000000E+00
+4.65000999998036422534E-03,2.29180220394743461299E+00,1.31966484103003111467E-03,1.41898345566671746365E-01,7.08233458240263222261E-03,7.61518716461085709568E-01,0.00000000000000000000E+00,5.23609635587819699509E-01,2.33544887677989213004E-03,2.51109182439202494042E-01,1.00002027696627449060E+00,0.00000000000000000000E+00
+4.80000999997947340459E-03,2.29180260623210152460E+00,1.36223432856557268023E-03,1.41898237427825812951E-01,7.31078987725128793401E-03,7.61516571109462470091E-01,0.00000000000000000000E+00,5.23610347521998642506E-01,2.41078142490418504892E-03,2.51107797684812505956E-01,1.00002027696219597530E+00,0.00000000000000000000E+00
+4.95000999997858258383E-03,2.29180302128760482461E+00,1.40480378314454383039E-03,1.41898125856117274246E-01,7.53924451828079725257E-03,7.61514357664704988338E-01,0.00000000000000000000E+00,5.23611082055879251129E-01,2.48611355100984221869E-03,2.51106368980314742512E-01,1.00002027695798800799E+00,0.00000000000000000000E+00
+`;
+
+function parseData(csv) {
+  const lines = csv.trim().split('\n');
+  const headers = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    const values = line.split(',');
+    const entry = {};
+    headers.forEach((header, index) => {
+      entry[header] = parseFloat(values[index]);
+    });
+    return entry;
+  });
+}
+
+const trajectoryData = parseData(csvData);
+
+// --- React Component ---
 
 const Scene3DNR = () => {
-  const canvasRef = useRef(null);
-  const engineRef = useRef(null);
+  const reactCanvas = useRef(null); 
 
   useEffect(() => {
-    const createScene = () => {
-      if (!canvasRef.current) return;
+    if (!reactCanvas.current) return;
 
-      const engine = new Engine(canvasRef.current, true);
-      engineRef.current = engine;
-      const scene = new Scene(engine);
+    const engine = new BABYLON.Engine(reactCanvas.current, true);
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 1); // Dark background
 
-      const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 15, new Vector3(0, 0, 0), scene);
-      camera.attachControl(canvasRef.current, true);
-      camera.lowerRadiusLimit = 5;  // Prevent zooming too close
-      camera.upperRadiusLimit = 50; // Prevent zooming too far
+    // --- Camera ---
+    const camera = new BABYLON.ArcRotateCamera(
+      "camera",
+      -Math.PI / 2,         // Alpha (rotation around Y)
+      Math.PI / 2.5,        // Beta (rotation around X)
+      10,                   // Radius (distance from target)
+      BABYLON.Vector3.Zero(),// Target position
+      scene
+    );
+    camera.attachControl(reactCanvas.current, true);
+    camera.lowerRadiusLimit = 2;
+    camera.upperRadiusLimit = 50;
+    camera.wheelDeltaPercentage = 0.01;
 
-      // const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
+    // --- Light ---
+    const light = new BABYLON.HemisphericLight(
+      "light",
+      new BABYLON.Vector3(0, 1, 0), // Light direction (from above)
+      scene
+    );
+    light.intensity = 0.8;
 
-      // --- Atom Creation ---
+    // --- Objects ---
+    // Nucleus (at origin)
+    const nucleus = BABYLON.MeshBuilder.CreateSphere("nucleus", { diameter: 0.5 }, scene);
+    const nucleusMaterial = new BABYLON.StandardMaterial("nucleusMat", scene);
+    nucleusMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0); // Red
+    nucleusMaterial.emissiveColor = new BABYLON.Color3(0.5, 0, 0); // Make it glow slightly
+    nucleus.material = nucleusMaterial;
 
-      // Nucleus (sphere)
-      const nucleus = MeshBuilder.CreateSphere("nucleus", { diameter: 2 }, scene);
-      const nucleusMaterial = new StandardMaterial("nucleusMat", scene);
-      nucleusMaterial.diffuseColor = new Color3(1, 0, 0); // Red nucleus
-      nucleusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
-      nucleus.material = nucleusMaterial;
+    // Electron
+    const electron = BABYLON.MeshBuilder.CreateSphere("electron", { diameter: 0.2 }, scene);
+    const electronMaterial = new BABYLON.StandardMaterial("electronMat", scene);
+    electronMaterial.diffuseColor = new BABYLON.Color3(0, 0.5, 1); // Blue
+    electronMaterial.emissiveColor = new BABYLON.Color3(0, 0.2, 0.5); // Make it glow slightly
+    electron.material = electronMaterial;
 
-      // Electrons (smaller spheres)
-      const numElectrons = 3; // Change the number of electrons
-      const electrons = [];
-      const electronPaths = []; // Store the paths for animation
+    // Electron Trail
+    // Note: TrailMesh needs the main mesh (electron) to move *before* the trail updates.
+    // We achieve this by updating the electron in registerBeforeRender and letting the TrailMesh update automatically.
+    const trail = new TrailMesh("electronTrail", electron, scene, 0.1, 60, true); // Diameter, length, auto-update
+    const trailMaterial = new BABYLON.StandardMaterial("trailMat", scene);
+    trailMaterial.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.6);
+    trailMaterial.diffuseColor = new BABYLON.Color3(0.1, 0.3, 0.6);
+    trailMaterial.specularColor = new BABYLON.Color3(0, 0, 0); // No shininess
+    trailMaterial.alpha = 0.5; // Semi-transparent
+    trail.material = trailMaterial;
 
-      for (let i = 0; i < numElectrons; i++) {
-        const electron = MeshBuilder.CreateSphere(`electron${i}`, { diameter: 0.5 }, scene);
-        const electronMaterial = new StandardMaterial(`electronMat${i}`, scene);
-        electronMaterial.diffuseColor = new Color3(0, 0.5, 1); // Blue electrons
-        electron.material = electronMaterial;
-        electrons.push(electron);
 
-        // Define an elliptical path for each electron
-        const radiusX = 4 + i * 0.8; // Vary the radius for each electron
-        const radiusZ = 2 + i * 0.4;
-        const path = [];
-        const numPoints = 50;  // Number of points to define the ellipse
-        for (let j = 0; j <= numPoints; j++) {
-          const angle = (j / numPoints) * Math.PI * 2;
-          const x = radiusX * Math.cos(angle);
-          const z = radiusZ * Math.sin(angle);
-          //Add a little variation to the y axis to separate the orbital paths
-          const y = Math.sin(angle * (i + 1)) * 0.5;
-          path.push(new Vector3(x, y, z));
+    // --- Animation ---
+    let dataIndex = 0;
+    const positionScale = 1.0; // Adjust this if the 'r' values are too small/large visually
+
+    // Function to convert Spherical to Cartesian
+    // Assumes: r = radius, phi = azimuthal angle (around Y), theta = polar angle (from Y)
+    // Babylon uses Y-up, Left-Handed. Standard physics is often Z-up, Right-Handed.
+    // We'll use the common physics conversion and see how it maps. Adjust if needed.
+    // x = r * sin(theta) * cos(phi)
+    // y = r * cos(theta)               <-- Maps to Z in physics (polar angle)
+    // z = r * sin(theta) * sin(phi)  <-- Maps to Y in physics
+    // Let's try mapping directly:
+    // x = r * sin(theta) * cos(phi)
+    // y = r * cos(theta)  <- This will be height in Babylon's Y-up system
+    // z = r * sin(theta) * sin(phi)
+
+    function sphericalToCartesian(r, phi, theta) {
+        const x = r * Math.sin(theta) * Math.cos(phi);
+        const y = r * Math.cos(theta); // Use theta for height (angle from pole/Y-axis)
+        const z = r * Math.sin(theta) * Math.sin(phi);
+        return new BABYLON.Vector3(x, y, z);
+    }
+
+
+    let frameCounter = 0;
+    // const framesPerDataPoint = 2;
+    const framesPerDataPoint = 2; // Slow down animation - update position every N frames
+
+    scene.registerBeforeRender(() => {
+        if (trajectoryData.length === 0) return;
+
+        frameCounter++;
+        if (frameCounter >= framesPerDataPoint) {
+            frameCounter = 0; // Reset counter
+
+            // Get current data point
+            const currentData = trajectoryData[dataIndex];
+            const r = currentData.r * positionScale;
+            const phi = currentData.phi;
+            const theta = currentData.theta;
+
+            // Convert and update electron position
+            electron.position = sphericalToCartesian(r, phi, theta);
+
+            // Move to next data point, looping if necessary
+            dataIndex = (dataIndex + 1) % trajectoryData.length;
         }
-		electronPaths.push(path);
+    });
 
-        // --- Animation ---
-        const frameRate = 30; // Frames per second
+    // --- Render Loop ---
+    engine.runRenderLoop(() => {
+      scene.render();
+    });
 
-        // Animate the electron along the defined path
-        const electronAnimation = new Animation(
-          `electronAnimation${i}`,
-          "position",
-          frameRate,
-          Animation.ANIMATIONTYPE_VECTOR3,
-          Animation.ANIMATIONLOOPMODE_CYCLE
-        );
-
-        const keyFrames = [];
-        for (let p = 0; p < path.length; p++) {
-          keyFrames.push({ frame: p, value: path[p] });
-        }
-
-        electronAnimation.setKeys(keyFrames);
-
-        // Add easing (optional, but makes the animation look nicer)
-        const easingFunction = new SineEase();
-        easingFunction.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
-        electronAnimation.setEasingFunction(easingFunction);
-
-
-        electron.animations.push(electronAnimation);
-        scene.beginAnimation(electron, 0, path.length, true); // Loop the animation
-
-      }
-
-       // --- Optional: Draw the orbital paths as lines (for visualization) ---
-       for (const path of electronPaths){
-            const lines = MeshBuilder.CreateLines("lines", {points: path}, scene);
-            lines.color = new Color3(0.7, 0.7, 0.7);
-       }
-
-      engine.runRenderLoop(() => {
-        if (scene) {
-          scene.render();
-        }
-      });
-
-      const handleResize = () => {
-        if (engineRef.current) {
-          engineRef.current.resize();
-        }
-      };
-      window.addEventListener('resize', handleResize);
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        if (engineRef.current) {
-          engineRef.current.dispose();
-        }
-      };
+    // --- Resize Handling ---
+    const handleResize = () => {
+      engine.resize();
     };
+    window.addEventListener('resize', handleResize);
 
-    createScene();
-  }, []);
+    // --- Cleanup ---
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      scene.dispose();
+      engine.dispose();
+    };
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   return (
     <canvas
-      ref={canvasRef}
-      style={{ width: '100%', height: '100vh' }}
+      ref={reactCanvas}
+      style={{ width: '100%', height: '100vh', display: 'block', outline: 'none' }}
+      // touchAction="none" // Useful for preventing browser default touch actions
     />
   );
 };
