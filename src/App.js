@@ -57,7 +57,7 @@ function App() {
         type="range"
         id="speedSlider"
         min="0.1"
-        max="10"
+        max="1000"
         step="0.1"
         value={speed}
         onChange={handleSpeedChange}
