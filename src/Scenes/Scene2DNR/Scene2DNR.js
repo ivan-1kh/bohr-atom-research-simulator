@@ -13,7 +13,6 @@ const Scene2DNR = ({ speed }) => {
 
   // --- Data Fetching and Parsing ---
   useEffect(() => {
-
     helperMethods.fetchAndParseTrajectory("/2d_3_1_d100.csv", setIsLoading, setError, setTrajectoryData, ["r", "psi"]);
   }, []);
 
@@ -24,7 +23,7 @@ const Scene2DNR = ({ speed }) => {
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
-  
+
 
   // --- Babylon.js Scene Setup ---
   useEffect(() => {
@@ -53,9 +52,15 @@ const Scene2DNR = ({ speed }) => {
 
     camera.attachControl(reactCanvas.current, true);
     // Lock camera to 2D view (allow zoom/pan, disable rotation)
-    camera.lowerBetaLimit = 0.01; // Prevent looking under the XY plane
-    camera.upperBetaLimit = Math.PI * 0.05; // Prevent looking too far up
-    camera.lowerRadiusLimit = 1;    // Min zoom
+    camera.lowerBetaLimit = Math.PI / 2; // Prevent looking under the XY plane
+    // camera.lowerBetaLimit = 0.01; // Prevent looking under the XY plane
+    camera.upperBetaLimit = Math.PI / 2; // * 0.05; // Prevent looking too far up
+
+    camera.lowerAlphaLimit = Math.PI / 2;
+    camera.upperAlphaLimit = Math.PI / 2;
+    // camera.lowerAlphaLimit = Math.PI / 4;
+
+    camera.lowerRadiusLimit = 5;    // Min zoom
     camera.upperRadiusLimit = 100;  // Max zoom (adjust as needed)
     camera.wheelDeltaPercentage = 0.02; // Zoom speed
 
@@ -63,6 +68,8 @@ const Scene2DNR = ({ speed }) => {
     const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
     light.intensity = 0.9;
 
+    // --- Create Coordinate Axes ---
+    createCoordinateAxes(scene, initialRadius);
 
     // --- Objects ---
     // Nucleus
@@ -85,7 +92,7 @@ const Scene2DNR = ({ speed }) => {
 
 
     // Electron Trail
-    const trail = new TrailMesh("electronTrail", electron, scene, 0.1, 5000, true); // Diameter, length, auto-update
+    const trail = new TrailMesh("electronTrail", electron, scene, 0.025, 5000, true); // Diameter, length, auto-update
     const trailMaterial = new BABYLON.StandardMaterial("trailMat", scene);
     trailMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.4, 0.7);
     trailMaterial.diffuseColor = trailMaterial.emissiveColor;
@@ -108,8 +115,8 @@ const Scene2DNR = ({ speed }) => {
       // const frameDelay = Math.max(1, Math.floor(10 / speedRef.current));
       // if (frameCounter >= frameDelay) {
       if (frameCounter >= (1 / speedRef.current)) { // Invert the speed logic
-      // if (frameCounter >= speedRef.current) {
-      // if (frameCounter >= framesPerDataPoint) {
+        // if (frameCounter >= speedRef.current) {
+        // if (frameCounter >= framesPerDataPoint) {
         frameCounter = 0;
 
         const currentData = trajectoryData[dataIndex];
@@ -156,6 +163,102 @@ const Scene2DNR = ({ speed }) => {
     // Rerun effect if data loading finishes (isLoading changes) or if error state changes
   }, [isLoading, error, trajectoryData]); // Depend on loading/error state and data
 
+  // Function to create coordinate axes with grid
+  const createCoordinateAxes = (scene, size) => {
+    // Create grid in the XY plane (much larger area)
+    createGrid(scene, 200); // Fixed large grid size of 200 units in each direction
+  };
+  
+  // Function to create a grid in the XY plane
+  const createGrid = (scene, size) => {
+    // Grid parameters
+    const gridSize = size; // Fixed at 200 units
+    const majorLineCount = 20; // Number of major grid lines in each direction (increased)
+    const minorLinesPerMajor = 4; // Number of minor lines between major lines
+    
+    // Calculate spacing
+    const majorSpacing = gridSize / majorLineCount;
+    const minorSpacing = majorSpacing / (minorLinesPerMajor + 1);
+    
+    // Create materials
+    const majorMaterial = new BABYLON.StandardMaterial("majorGridMat", scene);
+    majorMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+    majorMaterial.alpha = 0.5;
+    
+    const minorMaterial = new BABYLON.StandardMaterial("minorGridMat", scene);
+    minorMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+    minorMaterial.alpha = 0.15;
+    
+    // Calculate total lines (including negative space)
+    const totalLines = majorLineCount * 2; // Cover both positive and negative space
+    
+    // Create grid lines
+    const lines = [];
+    
+    // Create grid lines along X and Y axes
+    for (let i = -majorLineCount; i <= majorLineCount; i++) {
+      const isMajor = i % 1 === 0; // Every whole number is a major line
+      
+      if (isMajor) {
+        // Create major line - along X axis
+        const lineX = BABYLON.MeshBuilder.CreateLines(`gridLineX${i}`, {
+          points: [
+            new BABYLON.Vector3(i * majorSpacing, -gridSize, 0),
+            new BABYLON.Vector3(i * majorSpacing, gridSize, 0)
+          ]
+        }, scene);
+        
+        // Create major line - along Y axis
+        const lineY = BABYLON.MeshBuilder.CreateLines(`gridLineY${i}`, {
+          points: [
+            new BABYLON.Vector3(-gridSize, i * majorSpacing, 0),
+            new BABYLON.Vector3(gridSize, i * majorSpacing, 0)
+          ]
+        }, scene);
+        
+        // Apply material
+        lineX.color = majorMaterial.diffuseColor;
+        lineY.color = majorMaterial.diffuseColor;
+        
+        // Make origin lines thicker and fully opaque
+        if (i === 0) {
+          lineX.color = new BABYLON.Color3(0.7, 0.7, 0.7);
+          lineY.color = new BABYLON.Color3(0.7, 0.7, 0.7);
+        }
+        
+        lines.push(lineX, lineY);
+        
+        // Add minor lines
+        if (i < majorLineCount) {
+          for (let j = 1; j <= minorLinesPerMajor; j++) {
+            const minorPos = i * majorSpacing + j * minorSpacing;
+            
+            // Minor line - along X axis
+            const minorLineX = BABYLON.MeshBuilder.CreateLines(`gridMinorLineX${i}_${j}`, {
+              points: [
+                new BABYLON.Vector3(minorPos, -gridSize, 0),
+                new BABYLON.Vector3(minorPos, gridSize, 0)
+              ]
+            }, scene);
+            
+            // Minor line - along Y axis
+            const minorLineY = BABYLON.MeshBuilder.CreateLines(`gridMinorLineY${i}_${j}`, {
+              points: [
+                new BABYLON.Vector3(-gridSize, minorPos, 0),
+                new BABYLON.Vector3(gridSize, minorPos, 0)
+              ]
+            }, scene);
+            
+            // Apply material
+            minorLineX.color = minorMaterial.diffuseColor;
+            minorLineY.color = minorMaterial.diffuseColor;
+            
+            lines.push(minorLineX, minorLineY);
+          }
+        }
+      }
+    }
+  };
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
