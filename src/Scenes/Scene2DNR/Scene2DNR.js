@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as BABYLON from "@babylonjs/core";
-import { TrailMesh } from "@babylonjs/core/Meshes/trailMesh";
-import { AxesViewer } from "@babylonjs/core/Debug/axesViewer";
+import { GridMaterial } from "@babylonjs/materials";
 import helperMethods from "../../helperMethods";
 
 const Scene2DNR = ({ speed }) => {
@@ -9,6 +8,29 @@ const Scene2DNR = ({ speed }) => {
   const [trajectoryData, setTrajectoryData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const speedRef = useRef(speed);
+
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const pauseStartTimeRef = useRef(null);
+  const pausedDurationRef = useRef(0);
+  const startTimeRef = useRef(performance.now());
+
+  // NEW: State to toggle axes and grid visibility
+  const [showAxesAndGrid, setShowAxesAndGrid] = useState(true);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    if (paused) {
+      pauseStartTimeRef.current = performance.now();
+    } else {
+      if (pauseStartTimeRef.current) {
+        pausedDurationRef.current +=
+          performance.now() - pauseStartTimeRef.current;
+        pauseStartTimeRef.current = null;
+      }
+    }
+  }, [paused]);
 
   useEffect(() => {
     helperMethods.fetchAndParseTrajectory(
@@ -20,7 +42,6 @@ const Scene2DNR = ({ speed }) => {
     );
   }, []);
 
-  const speedRef = useRef(speed);
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
@@ -37,226 +58,291 @@ const Scene2DNR = ({ speed }) => {
 
     const engine = new BABYLON.Engine(reactCanvas.current, true);
     const scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.15, 1);
 
-    // Dynamically determine initial radius and potentially grid size
-    const initialMaxRadius = trajectoryData.reduce(
-      (max, data) => Math.max(max, Math.abs(data.r || 0)),
-      5
-    );
-    const initialRadius = initialMaxRadius * 1.5;
-
-    const canvasWidth = reactCanvas.current.clientWidth;
-    const canvasHeight = reactCanvas.current.clientHeight;
-
-    const gridSize = Math.max(canvasWidth, canvasHeight) / 10;
+    scene.clearColor = new BABYLON.Color4(0, 0, 0.2, 1);
 
     const camera = new BABYLON.ArcRotateCamera(
       "camera",
       -Math.PI / 2,
-      (Math.PI / 2) * 0.99,
-      initialRadius,
+      Math.PI / 2,
+      20,
       BABYLON.Vector3.Zero(),
       scene
     );
     camera.attachControl(reactCanvas.current, true);
-    camera.lowerBetaLimit = (Math.PI / 2) * 0.99;
-    camera.upperBetaLimit = (Math.PI / 2) * 0.99;
-    camera.lowerRadiusLimit = 1;
-    camera.upperRadiusLimit = initialRadius * 2; // Adjust max zoom out
-    camera.wheelDeltaPercentage = 0.02;
 
+    const nucleus = BABYLON.MeshBuilder.CreateSphere(
+      "nucleus",
+      { diameter: 0.5, segments: 16 },
+      scene
+    );
+    nucleus.material = new BABYLON.StandardMaterial("nucleusMaterial", scene);
+    nucleus.material.diffuseColor = new BABYLON.Color3(0, 0, 1);
+
+    // Add a light source
     const light = new BABYLON.HemisphericLight(
       "light",
       new BABYLON.Vector3(0, 1, 0),
       scene
     );
-    light.intensity = 0.9;
+    light.intensity = 1;
 
-    const axisLength = gridSize / 2; // Adjust length as needed
-    const axisMaterialX = new BABYLON.StandardMaterial("xAxisMat", scene);
-    axisMaterialX.diffuseColor = new BABYLON.Color3(1, 0, 0); // Red for X
-    const axisMaterialY = new BABYLON.StandardMaterial("yAxisMat", scene);
-    axisMaterialY.diffuseColor = new BABYLON.Color3(0, 1, 0); // Green for Y
-
-    // X-Axis
-    const xAxisPoints = [
-      new BABYLON.Vector3(-axisLength, 0, 0),
-      new BABYLON.Vector3(axisLength, 0, 0),
-    ];
-    const xAxis = BABYLON.MeshBuilder.CreateLines(
-      "xAxis",
-      { points: xAxisPoints },
-      scene
-    );
-    xAxis.material = axisMaterialX;
-
-    // Y-Axis
-    const yAxisPoints = [
-      new BABYLON.Vector3(0, -axisLength, 0),
-      new BABYLON.Vector3(0, axisLength, 0),
-    ];
-    const yAxis = BABYLON.MeshBuilder.CreateLines(
-      "yAxis",
-      { points: yAxisPoints },
-      scene
-    );
-    yAxis.material = axisMaterialY;
-
-    // --- 2D Grid ---
-    const gridDivisions = 100;
-    const gridSpacing = gridSize / gridDivisions;
-    const gridMaterial = new BABYLON.StandardMaterial("gridMat", scene);
-    gridMaterial.wireframe = true;
-    gridMaterial.alpha = 0.5;
-
-    // Horizontal lines
-    for (let i = 0; i <= gridDivisions; i++) {
-      const y = -gridSize / 2 + i * gridSpacing;
-      const points = [
-        new BABYLON.Vector3(-gridSize / 2, y, 0),
-        new BABYLON.Vector3(gridSize / 2, y, 0),
-      ];
-      const line = BABYLON.MeshBuilder.CreateLines(
-        `hLine${i}`,
-        { points: points },
-        scene
-      );
-      line.material = gridMaterial;
-    }
-
-    // Vertical lines
-    for (let i = 0; i <= gridDivisions; i++) {
-      const x = -gridSize / 2 + i * gridSpacing;
-      const points = [
-        new BABYLON.Vector3(x, -gridSize / 2, 0),
-        new BABYLON.Vector3(x, gridSize / 2, 0),
-      ];
-      const line = BABYLON.MeshBuilder.CreateLines(
-        `vLine${i}`,
-        { points: points },
-        scene
-      );
-      line.material = gridMaterial;
-    }
-
-    // --- Objects ---
-    const nucleus = BABYLON.MeshBuilder.CreateSphere(
-      "nucleus",
-      { diameter: 0.5 },
-      scene
-    );
-    const nucleusMaterial = new BABYLON.StandardMaterial("nucleusMat", scene);
-    nucleusMaterial.diffuseColor = new BABYLON.Color3(1, 0.2, 0.2);
-    nucleusMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.1, 0.1);
-    nucleus.material = nucleusMaterial;
-    nucleus.position = BABYLON.Vector3.Zero();
-
+    // Electron mesh and material
     const electron = BABYLON.MeshBuilder.CreateSphere(
       "electron",
-      { diameter: 0.2 },
+      { diameter: 0.2, segments: 16 },
       scene
     );
-    const electronMaterial = new BABYLON.StandardMaterial("electronMat", scene);
-    electronMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.6, 1);
-    electronMaterial.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.5);
+    const electronMaterial = new BABYLON.StandardMaterial(
+      "electronMaterial",
+      scene
+    );
+    electronMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1); // Blue
+    electronMaterial.alpha = 1;
+    electronMaterial.backFaceCulling = false;
     electron.material = electronMaterial;
 
-    const trail = new TrailMesh(
-      "electronTrail",
+    const initialData = trajectoryData[0];
+    const initialPos = sphericalToCartesian(initialData.r, initialData.psi);
+    electron.position = initialPos;
+
+    // Ground with GridMaterial
+    const ground = BABYLON.MeshBuilder.CreateGround(
+      "ground",
+      { width: 200, height: 200 },
+      scene
+    );
+    const gridMaterial = new GridMaterial("gridMaterial", scene);
+    gridMaterial.majorUnitFrequency = 1;
+    gridMaterial.minorUnitVisibility = 0.45;
+    gridMaterial.gridRatio = 1;
+    gridMaterial.backFaceCulling = false;
+    gridMaterial.mainColor = new BABYLON.Color3(1, 1, 1);
+    gridMaterial.lineColor = new BABYLON.Color3(1, 1, 1);
+    gridMaterial.opacity = 0.98;
+    ground.material = gridMaterial;
+    ground.rotation.x = Math.PI / 2;
+
+    // Utility function to create text labels
+    function createTextLabel(text, position, scene) {
+      const dynamicTexture = new BABYLON.DynamicTexture(
+        "dynamic texture",
+        64,
+        scene,
+        true
+      );
+      dynamicTexture.hasAlpha = true;
+      dynamicTexture.drawText(
+        text,
+        5,
+        40,
+        "bold 36px Arial",
+        "white",
+        "transparent",
+        true
+      );
+
+      const plane = BABYLON.MeshBuilder.CreatePlane(
+        "textPlane",
+        { size: 0.5 },
+        scene
+      );
+      plane.material = new BABYLON.StandardMaterial("textPlaneMaterial", scene);
+      plane.material.diffuseTexture = dynamicTexture;
+      plane.material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+      plane.material.backFaceCulling = false;
+      plane.position = position.clone();
+      plane.position.z += 0.1;
+      return plane;
+    }
+
+    const axisLength = 100;
+
+    // Store all axis and tick meshes in an array for easy toggling
+    const axisMeshes = [];
+
+    // X Axis
+    const axisX = BABYLON.MeshBuilder.CreateLines(
+      "axisX",
+      {
+        points: [
+          new BABYLON.Vector3(-axisLength, 0, 0),
+          new BABYLON.Vector3(axisLength, 0, 0),
+        ],
+      },
+      scene
+    );
+    axisX.color = new BABYLON.Color3(1, 0, 0);
+    axisMeshes.push(axisX);
+
+    for (let i = -axisLength; i <= axisLength; i++) {
+      if (i === 0) continue;
+      const tick = BABYLON.MeshBuilder.CreateLines(
+        "tickX" + i,
+        {
+          points: [
+            new BABYLON.Vector3(i, -0.1, 0),
+            new BABYLON.Vector3(i, 0.1, 0),
+          ],
+        },
+        scene
+      );
+      tick.color = new BABYLON.Color3(1, 0, 0);
+      axisMeshes.push(tick);
+      const label = createTextLabel(
+        `${i}`,
+        new BABYLON.Vector3(i, 0.2, 0),
+        scene
+      );
+      axisMeshes.push(label);
+    }
+
+    // Y Axis
+    const axisY = BABYLON.MeshBuilder.CreateLines(
+      "axisY",
+      {
+        points: [
+          new BABYLON.Vector3(0, -axisLength, 0),
+          new BABYLON.Vector3(0, axisLength, 0),
+        ],
+      },
+      scene
+    );
+    axisY.color = new BABYLON.Color3(0, 1, 0);
+    axisMeshes.push(axisY);
+
+    for (let i = -axisLength; i <= axisLength; i++) {
+      if (i === 0) continue;
+      const tick = BABYLON.MeshBuilder.CreateLines(
+        "tickY" + i,
+        {
+          points: [
+            new BABYLON.Vector3(-0.1, i, 0),
+            new BABYLON.Vector3(0.1, i, 0),
+          ],
+        },
+        scene
+      );
+      tick.color = new BABYLON.Color3(0, 1, 0);
+      axisMeshes.push(tick);
+      const label = createTextLabel(
+        `${i}`,
+        new BABYLON.Vector3(0.2, i, 0),
+        scene
+      );
+      axisMeshes.push(label);
+    }
+
+    function sphericalToCartesian(r, psi) {
+      const x = r * Math.cos(psi);
+      const y = r * Math.sin(psi);
+      return new BABYLON.Vector3(x, y, 0);
+    }
+
+    scene.registerBeforeRender(() => {
+      if (pausedRef.current) return;
+
+      const currentTime = performance.now();
+      const elapsedTime =
+        (currentTime - startTimeRef.current - pausedDurationRef.current) / 1000;
+
+      const totalSteps = trajectoryData.length;
+      const stepsPerSecond = speedRef.current * 10;
+      const totalProgress = elapsedTime * stepsPerSecond;
+      const index = Math.floor(totalProgress) % totalSteps;
+      const nextIndex = (index + 1) % totalSteps;
+      const t = totalProgress - Math.floor(totalProgress);
+
+      const currentData = trajectoryData[index];
+      const nextData = trajectoryData[nextIndex];
+
+      const currentPos = sphericalToCartesian(currentData.r, currentData.psi);
+      const nextPos = sphericalToCartesian(nextData.r, nextData.psi);
+
+      const interpolatedPos = BABYLON.Vector3.Lerp(currentPos, nextPos, t);
+
+      electron.position = interpolatedPos;
+    });
+
+    const trail = new BABYLON.TrailMesh(
+      "trail",
       electron,
       scene,
       0.1,
-      5000,
+      600,
       true
     );
-    const trailMaterial = new BABYLON.StandardMaterial("trailMat", scene);
-    trailMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.4, 0.7);
-    trailMaterial.diffuseColor = trailMaterial.emissiveColor;
-    trailMaterial.specularColor = BABYLON.Color3.Black();
-    trailMaterial.alpha = 0.6;
-    trail.material = trailMaterial;
+    trail.material = new BABYLON.StandardMaterial("trailMaterial", scene);
+    trail.material.diffuseColor = new BABYLON.Color3(1, 0, 0);
+    trail.material.alpha = 0.5;
+    trail.material.backFaceCulling = false;
+    trail.start();
 
-    let dataIndex = 0;
-    const positionScale = 1.0;
+    // Function to toggle visibility of axes and grid
+    function toggleAxesAndGrid(show) {
+      axisMeshes.forEach((mesh) => {
+        mesh.setEnabled(show);
+      });
+      ground.setEnabled(show);
+    }
 
-    let frameCounter = 0;
-
-    scene.registerBeforeRender(() => {
-      if (trajectoryData.length === 0) return;
-
-      // Adjust the divisor to make the speed increase more dramatically
-      const speedInterval = Math.max(1, Math.floor(100 / speedRef.current)); // Higher speed = smaller interval = faster movement
-
-      if (frameCounter % speedInterval === 0) {
-        const currentData = trajectoryData[dataIndex];
-        const r = currentData.r * positionScale;
-        const psi = currentData.psi;
-
-        const x = r * Math.cos(psi);
-        const y = r * Math.sin(psi);
-
-        electron.position.x = x;
-        electron.position.y = y;
-        electron.position.z = 0;
-
-        dataIndex = (dataIndex + 1) % trajectoryData.length;
-      }
-      frameCounter++;
-    });
+    // Initialize visibility based on state
+    toggleAxesAndGrid(showAxesAndGrid);
 
     engine.runRenderLoop(() => {
       scene.render();
     });
 
-    const handleResize = () => {
-      engine.resize();
-    };
-    window.addEventListener("resize", handleResize);
-
     return () => {
-      console.log("Cleaning up Babylon scene (2DNR)");
-      window.removeEventListener("resize", handleResize);
-      if (scene) {
-        scene.dispose();
-      }
-      if (engine) {
-        engine.dispose();
-      }
+      scene.dispose();
+      engine.dispose();
     };
-  }, [isLoading, error, trajectoryData]);
+  }, [isLoading, error, trajectoryData, showAxesAndGrid]);
 
   return (
-    <div style={{ width: "100%", height: "100vh", position: "relative" }}>
-      {isLoading && (
-        <div style={loadingErrorStyle}>Loading trajectory data...</div>
-      )}
-      {error && <div style={loadingErrorStyle}>Error: {error}</div>}
+    <>
+      <button
+        onClick={() => setPaused((prev) => !prev)}
+        style={{
+          position: "absolute",
+          top: "10px",
+          left: "10px",
+          zIndex: 1,
+          padding: "10px",
+          backgroundColor: "#fff",
+          border: "1px solid #ccc",
+          borderRadius: "5px",
+          cursor: "pointer",
+          marginRight: "10px",
+        }}
+      >
+        {paused ? "Resume" : "Pause"}
+      </button>
+
+      {/* NEW: Toggle button for axes and grid */}
+      <button
+        onClick={() => setShowAxesAndGrid((prev) => !prev)}
+        style={{
+          position: "absolute",
+          top: "10px",
+          left: "100px",
+          zIndex: 1,
+          padding: "10px",
+          backgroundColor: "#fff",
+          border: "1px solid #ccc",
+          borderRadius: "5px",
+          cursor: "pointer",
+        }}
+      >
+        {showAxesAndGrid ? "Hide Axes & Grid" : "Show Axes & Grid"}
+      </button>
+
       <canvas
         ref={reactCanvas}
-        style={{
-          width: "100%",
-          height: "100%",
-          display: isLoading || error ? "none" : "block",
-          outline: "none",
-        }}
-        touch-action="none"
+        style={{ width: "100%", height: "100vh", display: "block" }}
       />
-    </div>
+    </>
   );
-};
-
-const loadingErrorStyle = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  color: "white",
-  fontSize: "1.5em",
-  backgroundColor: "rgba(0,0,0,0.7)",
-  padding: "20px",
-  borderRadius: "8px",
-  zIndex: 10,
 };
 
 export default Scene2DNR;
