@@ -4,10 +4,10 @@
 
 ## June 22nd Progress Report
 
-![progress_report_page_1](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_1 "Page 1")
-![progress_report_page_2](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_2 "Page 2")
-![progress_report_page_3](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_3 "Page 3")
-![progress_report_page_4](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_4 "Page 4")
+![progress_report_page_1](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_1.jpg "Page 1")
+![progress_report_page_2](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_2.jpg "Page 2")
+![progress_report_page_3](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_3.jpg "Page 3")
+![progress_report_page_4](https://github.com/ivan-1kh/bohr-atom-research-simulator/tree/main/project_reports/progress_report_page_4.jpg "Page 4")
 
 ## Available Scripts
 
