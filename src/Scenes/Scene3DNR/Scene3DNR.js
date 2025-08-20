@@ -287,8 +287,6 @@ const Scene3DNR = ({ speed }) => {
     );
     light.intensity = 1;
 
-    
-
     const trail = new BABYLON.TrailMesh(
       "trail",
       electron,
