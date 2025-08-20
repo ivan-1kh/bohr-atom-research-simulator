@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import * as BABYLON from "@babylonjs/core";
 import { GridMaterial } from "@babylonjs/materials";
@@ -47,6 +48,7 @@ const Scene3DNR = ({ speed }) => {
     );
   }, []);
 
+  // --- Data Fetching and Parsing ---
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
@@ -74,6 +76,7 @@ const Scene3DNR = ({ speed }) => {
       BABYLON.Vector3.Zero(),
       scene
     );
+
     camera.attachControl(reactCanvas.current, true);
 
     const nucleus = BABYLON.MeshBuilder.CreateSphere(
@@ -385,5 +388,20 @@ const Scene3DNR = ({ speed }) => {
     </>
   );
 };
+
+// Basic style for loading/error messages
+const loadingErrorStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  color: 'white',
+  fontSize: '1.5em',
+  backgroundColor: 'rgba(0,0,0,0.7)',
+  padding: '20px',
+  borderRadius: '8px',
+  zIndex: 10
+};
+
 
 export default Scene3DNR;

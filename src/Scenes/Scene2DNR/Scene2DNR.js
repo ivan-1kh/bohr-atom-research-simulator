@@ -156,6 +156,7 @@ const Scene2DNR = ({ speed }) => {
       return plane;
     }
 
+
     const axisLength = 100;
 
     // Store all axis and tick meshes in an array for easy toggling
