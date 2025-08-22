@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as BABYLON from "@babylonjs/core";
 import { GridMaterial } from "@babylonjs/materials";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import helperMethods from "../../helperMethods";
 
 /**
@@ -12,7 +13,7 @@ import helperMethods from "../../helperMethods";
  * @param {number} props.speed - The playback speed of the simulation.
  * @returns {JSX.Element} The canvas element for the Babylon.js scene and UI controls.
  */
-const Scene2DR = ({ speed }) => {
+const Scene2DR = ({ speed, quantumNumbers, setIncludeM, reload }) => {
   // A reference to the canvas element where the scene will be rendered.
   const reactCanvas = useRef(null);
 
@@ -26,6 +27,8 @@ const Scene2DR = ({ speed }) => {
   const [showAxesAndGrid, setShowAxesAndGrid] = useState(true);
   // State to control the pause/resume functionality of the animation.
   const [paused, setPaused] = useState(false);
+  // State for the real-time psi graph data
+  const [psiGraphData, setPsiGraphData] = useState([]);
 
   // Refs to hold values that can change without re-rendering the component.
   const speedRef = useRef(speed); // Holds the current animation speed.
@@ -35,6 +38,9 @@ const Scene2DR = ({ speed }) => {
   const pauseStartTimeRef = useRef(null); // Timestamp when pause began.
   const pausedDurationRef = useRef(0); // Total accumulated duration of all pauses.
   const startTimeRef = useRef(performance.now()); // Timestamp when the animation started.
+
+  // Ref to track r_max for the graph
+  const rMaxRef = useRef(0);
 
   // Effect to synchronize the `paused` state with its ref equivalent.
   // This allows the render loop (which is not a React component) to access the current pause state.
@@ -55,15 +61,26 @@ const Scene2DR = ({ speed }) => {
 
   // Effect to fetch and parse the trajectory data when the component mounts.
   useEffect(() => {
+    setIncludeM(false);
     helperMethods.fetchAndParseTrajectory(
-      "/trajectory_data/2d/rel/3_1.csv",
+      `/trajectory_data/2d/rel/${quantumNumbers.n}_${quantumNumbers.k}.csv`,
       setIsLoading,
       setError,
       setTrajectoryData,
-      ["r", "psi"] // Columns to parse from the CSV.
+      ["r", "psi", "delta_psi"] // Columns to parse from the CSV.
     );
-  }, []); // Empty dependency array ensures this runs only once.
+  }, [reload]);
 
+  // Calculate r_max when trajectory data changes
+  useEffect(() => {
+    if (trajectoryData.length > 0) {
+      const maxR = Math.max(...trajectoryData.map(point => point.r));
+      rMaxRef.current = maxR;
+      // Reset graph data when new trajectory is loaded
+      setPsiGraphData([]);
+    }
+  }, [trajectoryData]);
+  
   // Effect to update the speed ref whenever the `speed` prop changes.
   useEffect(() => {
     speedRef.current = speed;
@@ -301,6 +318,29 @@ const Scene2DR = ({ speed }) => {
       // Linearly interpolate between the two points for smooth animation.
       const interpolatedPos = BABYLON.Vector3.Lerp(currentPos, nextPos, t);
       electron.position = interpolatedPos;
+
+      // Update the psi graph data in real-time
+      // Only add data points when r is at or very close to r_max
+      const currentR = BABYLON.Vector3.Lerp(
+        new BABYLON.Vector3(currentData.r, 0, 0),
+        new BABYLON.Vector3(nextData.r, 0, 0),
+        t
+      ).x;
+
+      if (Math.abs(currentR - rMaxRef.current) < 0.1) { // tolerance for r_max
+        const currentPsi = currentData.psi + t * (nextData.psi - currentData.psi);
+        const psiAtRMax = Math.abs(currentPsi); // |psi(r = r_max)|
+        
+        setPsiGraphData(prevData => {
+          const newData = [...prevData, { 
+            time: elapsedTime, 
+            psi: psiAtRMax,
+            angle: currentPsi * 180 / Math.PI // for display purposes
+          }];
+          // Keep only last 200 points to prevent memory issues
+          return newData.slice(-200);
+        });
+      }
     });
 
     // --- Render and Cleanup ---
@@ -355,6 +395,48 @@ const Scene2DR = ({ speed }) => {
       >
         {showAxesAndGrid ? "Hide Axes & Grid" : "Show Axes & Grid"}
       </button>
+
+      {/* Real-time Psi Graph */}
+      <div
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          width: "300px",
+          height: "200px",
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          borderRadius: "5px",
+          padding: "10px",
+          zIndex: 1,
+        }}
+      >
+        <h4 style={{ margin: "0 0 10px 0", fontSize: "12px", textAlign: "center" }}>
+          |ψ(r = r_max)| vs Time
+        </h4>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={psiGraphData}>
+            <XAxis 
+              dataKey="time" 
+              type="number"
+              scale="linear"
+              domain={['dataMin', 'dataMax']}
+              tick={{ fontSize: 10 }}
+            />
+            <YAxis 
+              domain={['dataMin', 'dataMax']}
+              tick={{ fontSize: 10 }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="psi" 
+              stroke="#2563eb" 
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
       <canvas
         ref={reactCanvas}

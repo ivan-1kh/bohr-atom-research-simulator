@@ -12,7 +12,7 @@ import helperMethods from "../../helperMethods";
  * @param {number} props.speed - The playback speed of the simulation.
  * @returns {JSX.Element} The canvas element for the Babylon.js scene and UI controls.
  */
-const Scene2DNR = ({ speed }) => {
+const Scene2DNR = ({ speed, quantumNumbers, setIncludeM, reload }) => {
   // A reference to the canvas element where the scene will be rendered.
   const reactCanvas = useRef(null);
 
@@ -55,14 +55,15 @@ const Scene2DNR = ({ speed }) => {
 
   // Effect to fetch and parse the trajectory data when the component mounts.
   useEffect(() => {
+    setIncludeM(false);
     helperMethods.fetchAndParseTrajectory(
-      "/trajectory_data/2d/nr/3_1.csv",
+      `/trajectory_data/2d/nr/${quantumNumbers.n}_${quantumNumbers.k}.csv`,
       setIsLoading,
       setError,
       setTrajectoryData,
       ["r", "psi"] // Columns to parse from the CSV.
     );
-  }, []); // Empty dependency array ensures this runs only once.
+  }, [reload]);
 
   // Effect to update the speed ref whenever the `speed` prop changes.
   useEffect(() => {

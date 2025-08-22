@@ -9,7 +9,9 @@ import QuantumNumberControls from './QuantumNumberControls/QuantumNumberControls
 function App() {
   const [speed, setSpeed] = React.useState(1.0);
   const [scene, setScene] = React.useState("2DNR");
-  const [quantumNumbers, setQuantumNumbers] = React.useState({ n: 1, k: 0 });
+  const [quantumNumbers, setQuantumNumbers] = React.useState({ n: 1, k: 1, m: 0 });
+  const [includeM, setIncludeM] = React.useState(false);
+  const [reload, setReload] = React.useState(false);
 
   const handleSpeedChange = (event) => {
     const newSpeed = parseFloat(event.target.value);
@@ -57,13 +59,20 @@ function App() {
           onChange={handleSpeedChange}
         />
         <span style={{ color: "white" }}>{speed.toFixed(1)}</span>
-        <QuantumNumberControls onChange={handleQuantumNumberChange} />
+        <QuantumNumberControls onChange={handleQuantumNumberChange} includeM={includeM} />
+        <button style={{
+          padding: "10px",
+          backgroundColor: "#fff",
+          border: "1px solid #ccc",
+          borderRadius: "5px",
+          cursor: "pointer",
+        }} onClick={() => setReload(!reload)}>Reload</button>
       </div>
 
-      {scene === "2DNR" && <Scene2DNR speed={speed} quantumNumbers={quantumNumbers} />}
-      {scene === "2DR" && <Scene2DR speed={speed} quantumNumbers={quantumNumbers} />}
-      {scene === "3DNR" && <Scene3DNR speed={speed} quantumNumbers={quantumNumbers} />}
-      {scene === "3DR" && <Scene3DR speed={speed} quantumNumbers={quantumNumbers} />}
+      {scene === "2DNR" && <Scene2DNR speed={speed} quantumNumbers={quantumNumbers} setIncludeM={setIncludeM} reload={reload} />}
+      {scene === "2DR" && <Scene2DR speed={speed} quantumNumbers={quantumNumbers} setIncludeM={setIncludeM} reload={reload} />}
+      {scene === "3DNR" && <Scene3DNR speed={speed} quantumNumbers={quantumNumbers} setIncludeM={setIncludeM} reload={reload} />}
+      {scene === "3DR" && <Scene3DR speed={speed} quantumNumbers={quantumNumbers} setIncludeM={setIncludeM} reload={reload} />}
     </div>
   );
 }
