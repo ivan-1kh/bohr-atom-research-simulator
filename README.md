@@ -1,27 +1,25 @@
-# Delivery Tracking System
+# Bohr model atom simulator with a twist (literally)
 
-A delivery tracking system for Supply Chains built with Node.js, Express, and jQuery.
+## Try the demo: https://bohr-sim.netlify.app/
 
-The system allows admins to create Supply Chain users (Companies) and Customer users, and allows Supply Chain users to fully manage packages that they've shipped out to customers.
+## June 22nd Progress Report
 
-The application uses MongoDB for storage. It validates user input on the front-end using JQuery Validate, and Validator on the back-end for the best data integrity.
+![progress_report_page_1](https://github.com/ivan-1kh/bohr-atom-research-simulator/blob/main/project_reports/progress_report_page_1.jpg?raw=true "Progress Report Page 1")
+![progress_report_page_2](https://github.com/ivan-1kh/bohr-atom-research-simulator/blob/main/project_reports/progress_report_page_2.jpg?raw=true "Progress Report Page 2")
+![progress_report_page_3](https://github.com/ivan-1kh/bohr-atom-research-simulator/blob/main/project_reports/progress_report_page_3.jpg?raw=true "Progress Report Page 3")
+![progress_report_page_4](https://github.com/ivan-1kh/bohr-atom-research-simulator/blob/main/project_reports/progress_report_page_4.jpg?raw=true "Progress Report Page 4")
 
-## Setup Instructions
+## Available Scripts
 
-### 1. Install Dependencies
-```bash
-npm install
-```
+In the project directory, you can run:
 
-### 2. Environment Configuration
-```bash
-MONGODB_URI=your_mongodb_database_url
-GEOAPIFY_API_KEY=your_geoapify_api_key
-LOCATIONIQ_API_KEY=your_locationiq_api_key
-PORT=3001
-```
+### `npm start`
 
-### 3. Run the Server
-```bash
-npm start
-```
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+
+The page will reload when you make changes.
+
+### `npm test`
+
+Launches the test runner in the interactive watch mode.
