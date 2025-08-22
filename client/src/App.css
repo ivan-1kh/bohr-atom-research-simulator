@@ -1,0 +1,24 @@
+.App {
+  text-align: center;
+}
+
+.scenesDropdown {
+  /* position: absolute; */
+  /* left: 5rem; */
+  /* top: 3rem; */
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: larger;
+  /* z-index: 999; */
+}
+
+.topLeftMenu {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  left: 5rem;
+  top: 3rem;
+  z-index: 999;
+}
